@@ -2,8 +2,8 @@ import { useEffect,useState } from 'react';
 import { useQuery, gql, } from '@apollo/client';
 
 const GET_LAUNCHES = gql`
-  query GetLaunches($limit: Int!, $offset: Int!) {
-    launches(limit: $limit, offset: $offset) {
+  query GetLaunches {
+    launches {
             mission_name
             rocket {
             rocket_name
@@ -18,14 +18,10 @@ const LaunchList=()=>{
     const [currentPage, setCurrentPage] = useState(0);
     const [PerPage] = useState(20);
     const [ content, setContent ]=useState([])
+    const [ display, setDisplay ]=useState([])
     const [ searchInput, setSearchInput ]=useState('')
     const [ order, setOrder ]=useState('ASC')
-    const { loading, error, data } = useQuery(GET_LAUNCHES,{ 
-        variables:{
-            limit:PerPage,
-            offset:currentPage*PerPage,
-        }
-     });
+    const { loading, error, data } = useQuery(GET_LAUNCHES);
 
     const sorting = (key) =>{
         if(key.includes('rocket')){
@@ -66,7 +62,7 @@ const LaunchList=()=>{
         const filterdata = data.launches.filter(item=>
             item.mission_name.toLowerCase().includes(searchInput.toLowerCase())||
             item.rocket.rocket_name.toLowerCase().includes(searchInput.toLowerCase())||
-            item.rocket.rocket_type.toLowerCase().includes(searchInput.toLowerCase())) 
+            item.rocket.rocket_type.toLowerCase().includes(searchInput.toLowerCase()))
             setContent(filterdata)  
      }
 
@@ -75,8 +71,13 @@ const LaunchList=()=>{
             setContent(data.launches)
             filterFun()
         }
-
-    },[data,searchInput,currentPage])
+    },[data,searchInput])
+    useEffect(() => {
+        const ContentDisplay = content
+        const startPerPage = currentPage *PerPage
+        const endPerPage = PerPage+startPerPage
+        setDisplay(ContentDisplay.slice(startPerPage,endPerPage))
+      }, [content,currentPage])
 
     if (loading) return <p>Loading ...</p>;
     if (error) return <p>Error :(</p>;
@@ -95,7 +96,7 @@ const LaunchList=()=>{
                     </tr>
                 </thead>
                 <tbody>
-                    {content&&content.length>0&&content.map(({ mission_name, rocket, launch_date_local },i) =>{
+                    {display&&display.length>0&&display.map(({ mission_name, rocket, launch_date_local },i) =>{
                         const format_date = launch_date_local.substr(0, 10).replaceAll('-','/')
                         const {rocket_name,rocket_type}=rocket
                         return(
@@ -112,7 +113,7 @@ const LaunchList=()=>{
             <div className='page'>
                 <button disabled={!currentPage} onClick={()=>setCurrentPage(currentPage-1)}>上一頁</button>
                 <p> Page {currentPage+1}</p>
-                <button disabled={content.length<20} onClick={()=>setCurrentPage(currentPage+1)}>下一頁</button>
+                <button disabled={display.length<20} onClick={()=>setCurrentPage(currentPage+1)}>下一頁</button>
             </div>
         </div>
     )
